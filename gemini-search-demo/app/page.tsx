@@ -6,8 +6,17 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 
+interface StructuredResult {
+  title: string;
+  description: string;
+  comment: string;
+  url?: string;
+  domain?: string;
+}
+
 interface SearchResult {
   answer: string;
+  structuredResults: StructuredResult[];
   groundingMetadata?: any;
   searchQueries: string[];
   sources: Array<{
@@ -94,14 +103,56 @@ export default function Home() {
 
         {result && (
           <div className="space-y-6">
-            <Card>
-              <CardHeader>
-                <CardTitle>回答</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="whitespace-pre-wrap">{result.answer}</div>
-              </CardContent>
-            </Card>
+            {result.structuredResults.length > 0 ? (
+              <Card>
+                <CardHeader>
+                  <CardTitle>検索結果</CardTitle>
+                  <CardDescription>
+                    構造化された検索結果
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-4">
+                    {result.structuredResults.map((item, index) => (
+                      <div key={index} className="border rounded-lg p-4 space-y-3">
+                        <div className="flex items-start justify-between gap-4">
+                          <h3 className="font-semibold text-lg flex-1">{item.title}</h3>
+                          {item.url && (
+                            <a
+                              href={item.url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="flex items-center gap-1 text-sm text-primary hover:underline flex-shrink-0"
+                            >
+                              <ExternalLink className="h-3 w-3" />
+                              {item.domain || "リンク"}
+                            </a>
+                          )}
+                        </div>
+                        <p className="text-muted-foreground">{item.description}</p>
+                        <p className="text-sm font-medium text-primary bg-primary/10 rounded-md px-3 py-2">
+                          💬 {item.comment}
+                        </p>
+                        {item.url && (
+                          <div className="text-xs text-muted-foreground truncate">
+                            {item.url}
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+            ) : (
+              <Card>
+                <CardHeader>
+                  <CardTitle>回答</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="whitespace-pre-wrap">{result.answer}</div>
+                </CardContent>
+              </Card>
+            )}
 
             {result.searchQueries.length > 0 && (
               <Card>

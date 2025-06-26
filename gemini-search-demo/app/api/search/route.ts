@@ -38,12 +38,14 @@ export async function POST(req: Request) {
     {
       "title": "サイト名またはページタイトル",
       "description": "内容の詳細説明",
-      "comment": "一言コメント"
+      "comment": "一言コメント",
+      "url": "参照元のURL",
+      "domain": "サイトのドメイン名"
     }
   ]
 }
 
-要約した回答は不要です。構造化データのみを出力してください。`;
+各結果には必ず参照元のURLを含めてください。要約した回答は不要です。構造化データのみを出力してください。`;
 
     // Make the request
     const response = await ai.models.generateContent({
