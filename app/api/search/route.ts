@@ -29,10 +29,28 @@ export async function POST(req: Request) {
       tools: [groundingTool],
     };
 
+    // Create structured query for JSON response
+    const structuredQuery = `${query}
+
+以下の形式の構造化データで回答してください（JSON形式）:
+{
+  "results": [
+    {
+      "title": "サイト名またはページタイトル",
+      "description": "内容の詳細説明",
+      "comment": "一言コメント",
+      "url": "参照元のURL",
+      "domain": "サイトのドメイン名"
+    }
+  ]
+}
+
+各結果には必ず参照元のURLを含めてください。要約した回答は不要です。構造化データのみを出力してください。`;
+
     // Make the request
     const response = await ai.models.generateContent({
       model: "gemini-2.5-flash",
-      contents: query,
+      contents: structuredQuery,
       config,
     });
     
@@ -40,12 +58,44 @@ export async function POST(req: Request) {
     
     // Get grounding metadata from the first candidate if available
     const groundingMetadata = response.candidates?.[0]?.groundingMetadata || null;
+    
+    // Extract web sources from grounding chunks
+    const sources = groundingMetadata?.groundingChunks?.map((chunk: any) => {
+      if (chunk.web) {
+        return {
+          uri: chunk.web.uri,
+          title: chunk.web.title,
+          domain: chunk.web.domain
+        };
+      }
+      if (chunk.retrievedContext) {
+        return {
+          uri: chunk.retrievedContext.uri,
+          title: chunk.retrievedContext.title
+        };
+      }
+      return null;
+    }).filter(Boolean) || [];
+
+    // Try to parse structured response
+    let structuredResults = [];
+    try {
+      // Clean the response text to extract JSON
+      const jsonMatch = text.match(/\{[\s\S]*\}/);
+      if (jsonMatch) {
+        const parsed = JSON.parse(jsonMatch[0]);
+        structuredResults = parsed.results || [];
+      }
+    } catch (error) {
+      console.log("Failed to parse structured response, using raw text");
+    }
 
     return NextResponse.json({
       answer: text,
+      structuredResults,
       groundingMetadata,
       searchQueries: groundingMetadata?.webSearchQueries || [],
-      sources: groundingMetadata?.groundingChunks || []
+      sources
     });
   } catch (error) {
     console.error("Search API error:", error);
